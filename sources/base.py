@@ -31,7 +31,9 @@ class ThreatIntelSource(ABC):
     async def _get_session(self) -> aiohttp.ClientSession:
         """Lazily create and return the HTTP session."""
         if self._session is None or self._session.closed:
-            timeout = aiohttp.ClientTimeout(total=10)
+            timeout = aiohttp.ClientTimeout(
+                total=10, connect=3, sock_read=7,
+            )
             self._session = aiohttp.ClientSession(timeout=timeout)
         return self._session
 

@@ -198,9 +198,15 @@ class TestCacheBehavior:
             indicator=IP,
             ioc_type="ip",
             reputation="MALICIOUS",
-            confidence_score=85,
-            sources=["abuseipdb"],
-            metadata={"sources": {}},
+            confidence_score=70,
+            sources=["greynoise", "abuseipdb"],
+            metadata={
+                "cached": False,
+                "sources": {
+                    "greynoise": _greynoise_result(is_malicious=True),
+                    "abuseipdb": _abuseipdb_result(90),
+                },
+            },
         )
         cache = _mock_cache(hit=cached_record)
         sources = _ip_sources()
@@ -209,6 +215,15 @@ class TestCacheBehavior:
         result = await agg.enrich_ioc(IP, "ip")
 
         assert result["metadata"]["cached"] is True
+        assert result["reputation"] == "MALICIOUS"
+        assert result["confidence_score"] == 70
+        assert result["is_malicious"] is True
+        assert "greynoise" in result["sources_consulted"]
+        assert "abuseipdb" in result["sources_flagged"]
+        assert "score_breakdown" in result
+        assert "first_seen" in result
+        assert "last_updated" in result
+        assert "ttl" in result
         # No source should have been called
         for s in sources.values():
             s.lookup.assert_not_called()
@@ -228,6 +243,7 @@ class TestCacheBehavior:
     async def test_force_refresh_bypasses_cache(self):
         cached_record = IOCRecord(
             indicator=IP, ioc_type="ip", reputation="CLEAN", confidence_score=0,
+            metadata={"sources": {}},
         )
         cache = _mock_cache(hit=cached_record)
         sources = _ip_sources()
@@ -444,6 +460,7 @@ class TestResultStructure:
             "indicator", "type", "reputation", "confidence_score",
             "is_malicious", "sources_consulted", "sources_flagged",
             "enrichment", "threat_details", "metadata", "score_breakdown",
+            "first_seen", "last_updated", "ttl",
         ]:
             assert key in result, f"Missing key: {key}"
 
@@ -495,6 +512,56 @@ class TestScoringIntegration:
 
         assert result["reputation"] == "SCANNER"
         assert result["confidence_score"] == 20
+
+
+# ---------------------------------------------------------------------------
+# Robustness
+# ---------------------------------------------------------------------------
+
+class TestRobustness:
+    async def test_whitespace_stripped_from_indicator(self):
+        sources = _ip_sources()
+        agg = ThreatIntelAggregator(cache=_mock_cache(), sources=sources)
+        result = await agg.enrich_ioc("  8.8.8.8  ", "ip")
+        assert result["indicator"] == "8.8.8.8"
+
+    async def test_newline_stripped_from_indicator(self):
+        sources = _ip_sources()
+        agg = ThreatIntelAggregator(cache=_mock_cache(), sources=sources)
+        result = await agg.enrich_ioc("8.8.8.8\n", "ip")
+        assert result["indicator"] == "8.8.8.8"
+
+    async def test_score_above_100_capped_in_cache(self):
+        """DB constrains confidence_score to 0-100, so cache store must cap it."""
+        sources = _ip_sources(
+            greynoise=_make_source("greynoise", _greynoise_result(is_malicious=True)),
+            abuseipdb=_make_source("abuseipdb", _abuseipdb_result(90)),
+            virustotal=_make_source("virustotal", _virustotal_result(10)),
+            threatfox=_make_source("threatfox", _threatfox_result(80)),
+            urlhaus=_make_source("urlhaus", _urlhaus_result(True)),
+        )
+        cache = _mock_cache()
+        agg = ThreatIntelAggregator(cache=cache, sources=sources)
+        result = await agg.enrich_ioc(IP, "ip")
+
+        # Raw score exceeds 100
+        assert result["confidence_score"] > 100
+        assert result["reputation"] == "MALICIOUS"
+        # But the value stored in cache is capped at 100
+        stored_record = cache.store.call_args[0][0]
+        assert stored_record.confidence_score == 100
+
+    async def test_score_under_100_not_capped(self):
+        sources = _ip_sources(
+            abuseipdb=_make_source("abuseipdb", _abuseipdb_result(90)),
+        )
+        cache = _mock_cache()
+        agg = ThreatIntelAggregator(cache=cache, sources=sources)
+        result = await agg.enrich_ioc(IP, "ip")
+
+        assert result["confidence_score"] == 40
+        stored_record = cache.store.call_args[0][0]
+        assert stored_record.confidence_score == 40
 
 
 # ---------------------------------------------------------------------------

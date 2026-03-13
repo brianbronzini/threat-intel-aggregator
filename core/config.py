@@ -38,6 +38,34 @@ class Settings(BaseSettings):
         "env_file_encoding": "utf-8",
     }
 
+    def validate_api_keys(self, logger: logging.Logger) -> None:
+        """Log warnings for missing API keys at startup."""
+        required = {
+            "ABUSEIPDB_API_KEY": self.abuseipdb_api_key,
+            "VIRUSTOTAL_API_KEY": self.virustotal_api_key,
+            "IPINFO_API_KEY": self.ipinfo_api_key,
+            "THREATFOX_API_KEY": self.threatfox_api_key,
+        }
+        optional = {
+            "GREYNOISE_API_KEY": self.greynoise_api_key,
+        }
+
+        missing_required = [k for k, v in required.items() if not v]
+        missing_optional = [k for k, v in optional.items() if not v]
+
+        if missing_required:
+            logger.warning(
+                "Missing API keys (sources will be disabled): %s",
+                ", ".join(missing_required),
+            )
+        if missing_optional:
+            logger.info(
+                "Optional API keys not set (will use free tier): %s",
+                ", ".join(missing_optional),
+            )
+        if not missing_required and not missing_optional:
+            logger.info("All API keys configured")
+
     def get_cache_ttl_hours(self, ioc_type: str) -> int:
         """Return cache TTL in hours for a given IOC type."""
         ttl_map = {

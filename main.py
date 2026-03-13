@@ -5,7 +5,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import router
+from api.routes import get_aggregator, router
 from core.config import settings, setup_logging
 from db.models import init_db
 
@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging(settings.log_level)
+    settings.validate_api_keys(logger)
     await init_db()
     logger.info(
         "Threat Intel Aggregator started on %s:%d",
@@ -22,6 +23,13 @@ async def lifespan(app: FastAPI):
         settings.api_port,
     )
     yield
+    # Shutdown: close all source HTTP sessions
+    try:
+        aggregator = get_aggregator()
+        await aggregator.close()
+        logger.info("Aggregator sessions closed")
+    except Exception:
+        logger.warning("Error closing aggregator sessions during shutdown")
 
 
 app = FastAPI(
@@ -46,5 +54,4 @@ if __name__ == "__main__":
         "main:app",
         host=settings.api_host,
         port=settings.api_port,
-        reload=True,
     )

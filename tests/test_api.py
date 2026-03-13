@@ -16,6 +16,7 @@ from main import app
 # ---------------------------------------------------------------------------
 
 def _enriched_result(indicator="8.8.8.8", ioc_type="ip", reputation="CLEAN", score=0):
+    now = datetime.now(timezone.utc).isoformat()
     return {
         "indicator": indicator,
         "type": ioc_type,
@@ -26,11 +27,14 @@ def _enriched_result(indicator="8.8.8.8", ioc_type="ip", reputation="CLEAN", sco
         "sources_flagged": [],
         "enrichment": {"country": "US", "org": "Google LLC"},
         "threat_details": {"threat_types": [], "malware_families": [], "tags": []},
+        "first_seen": now,
+        "last_updated": now,
+        "ttl": now,
         "metadata": {
             "cached": False,
             "cache_age_seconds": 0,
             "query_time_ms": 42,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": now,
             "sources": {},
         },
         "score_breakdown": {
@@ -156,6 +160,7 @@ class TestEnrich:
             "indicator", "type", "reputation", "confidence_score",
             "is_malicious", "sources_consulted", "sources_flagged",
             "enrichment", "threat_details", "metadata", "score_breakdown",
+            "first_seen", "last_updated", "ttl",
         ]:
             assert key in data, f"Missing key: {key}"
 

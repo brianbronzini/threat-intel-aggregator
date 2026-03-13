@@ -99,6 +99,64 @@ class ThreatIntelAggregator:
             )
 
     # ------------------------------------------------------------------
+    # Cache reconstruction
+    # ------------------------------------------------------------------
+
+    def _rebuild_from_cache(self, cached: IOCRecord, start_ms: float) -> dict:
+        """Rebuild a full enriched response from a cached IOCRecord."""
+        stored_meta = cached.metadata or {}
+        source_results = stored_meta.get("sources", {})
+
+        # Re-run scoring to get breakdown and flagged sources
+        scoring = calculate_reputation(source_results)
+
+        # Extract enrichment from ipinfo
+        enrichment = {}
+        ipinfo_data = source_results.get("ipinfo")
+        if ipinfo_data:
+            for key in ("country", "country_code", "city", "region", "org", "asn",
+                        "latitude", "longitude", "timezone", "postal"):
+                if key in ipinfo_data:
+                    enrichment[key] = ipinfo_data[key]
+
+        # Extract threat details from threatfox / urlhaus
+        threat_details: dict = {"threat_types": [], "malware_families": [], "tags": []}
+        tf_data = source_results.get("threatfox")
+        if tf_data:
+            threat_details["threat_types"] = tf_data.get("threat_types", [])
+            threat_details["malware_families"] = tf_data.get("malware_families", [])
+            threat_details["tags"].extend(tf_data.get("tags", []))
+        uh_data = source_results.get("urlhaus")
+        if uh_data:
+            threat_details["tags"].extend(uh_data.get("tags", []))
+
+        cache_age = int(
+            (datetime.now(timezone.utc) - cached.last_updated).total_seconds()
+        )
+
+        return {
+            "indicator": cached.indicator,
+            "type": cached.type,
+            "reputation": cached.reputation,
+            "confidence_score": cached.confidence_score,
+            "is_malicious": cached.reputation in ("MALICIOUS", "SUSPICIOUS"),
+            "sources_consulted": scoring["sources_consulted"],
+            "sources_flagged": scoring["sources_flagged"],
+            "enrichment": enrichment,
+            "threat_details": threat_details,
+            "first_seen": cached.first_seen.isoformat(),
+            "last_updated": cached.last_updated.isoformat(),
+            "ttl": cached.ttl.isoformat(),
+            "metadata": {
+                **stored_meta,
+                "cached": True,
+                "cache_age_seconds": cache_age,
+                "query_time_ms": int((time.monotonic() - start_ms) * 1000),
+            },
+            "score_breakdown": scoring["score_breakdown"],
+        }
+
+    # ------------------------------------------------------------------
     # Main enrichment method
     # ------------------------------------------------------------------
 
@@ -109,6 +167,7 @@ class ThreatIntelAggregator:
         force_refresh: bool = False,
     ) -> dict:
         """Enrich an IOC with threat intelligence from all applicable sources."""
+        indicator = indicator.strip()
         self._validate(indicator, ioc_type)
         start_ms = time.monotonic()
 
@@ -117,16 +176,7 @@ class ThreatIntelAggregator:
             try:
                 cached = await self.cache.get(indicator)
                 if cached is not None:
-                    result = cached.to_dict()
-                    result["metadata"] = {
-                        **result.get("metadata", {}),
-                        "cached": True,
-                        "cache_age_seconds": int(
-                            (datetime.now(timezone.utc) - cached.last_updated).total_seconds()
-                        ),
-                        "query_time_ms": int((time.monotonic() - start_ms) * 1000),
-                    }
-                    return result
+                    return self._rebuild_from_cache(cached, start_ms)
             except Exception:
                 logger.warning("Cache read failed for %s, querying sources", indicator)
 
@@ -173,7 +223,34 @@ class ThreatIntelAggregator:
         query_time_ms = int((time.monotonic() - start_ms) * 1000)
         now_iso = datetime.now(timezone.utc).isoformat()
 
-        enriched = {
+        # 7. Store in cache (DB constrains confidence_score to 0-100)
+        now = datetime.now(timezone.utc)
+        try:
+            record = IOCRecord(
+                indicator=indicator,
+                ioc_type=ioc_type,
+                reputation=scoring["reputation"],
+                confidence_score=min(scoring["confidence_score"], 100),
+                sources=scoring["sources_consulted"],
+                metadata={
+                    "cached": False,
+                    "cache_age_seconds": 0,
+                    "query_time_ms": query_time_ms,
+                    "timestamp": now_iso,
+                    "sources": source_results,
+                },
+            )
+            await self.cache.store(record)
+            first_seen = record.first_seen.isoformat()
+            last_updated = record.last_updated.isoformat()
+            ttl = record.ttl.isoformat()
+        except Exception:
+            logger.warning("Cache store failed for %s", indicator)
+            first_seen = now.isoformat()
+            last_updated = now.isoformat()
+            ttl = now.isoformat()
+
+        return {
             "indicator": indicator,
             "type": ioc_type,
             "reputation": scoring["reputation"],
@@ -183,6 +260,9 @@ class ThreatIntelAggregator:
             "sources_flagged": scoring["sources_flagged"],
             "enrichment": enrichment,
             "threat_details": threat_details,
+            "first_seen": first_seen,
+            "last_updated": last_updated,
+            "ttl": ttl,
             "metadata": {
                 "cached": False,
                 "cache_age_seconds": 0,
@@ -192,19 +272,3 @@ class ThreatIntelAggregator:
             },
             "score_breakdown": scoring["score_breakdown"],
         }
-
-        # 7. Store in cache
-        try:
-            record = IOCRecord(
-                indicator=indicator,
-                ioc_type=ioc_type,
-                reputation=scoring["reputation"],
-                confidence_score=scoring["confidence_score"],
-                sources=scoring["sources_consulted"],
-                metadata=enriched["metadata"],
-            )
-            await self.cache.store(record)
-        except Exception:
-            logger.warning("Cache store failed for %s", indicator)
-
-        return enriched
