@@ -44,7 +44,7 @@ class ThreatIntelAggregator:
             "abuseipdb": AbuseIPDBClient(api_key=settings.abuseipdb_api_key),
             "virustotal": VirusTotalClient(api_key=settings.virustotal_api_key),
             "ipinfo": IPinfoClient(api_key=settings.ipinfo_api_key),
-            "threatfox": ThreatFoxClient(),
+            "threatfox": ThreatFoxClient(api_key=settings.threatfox_api_key),
             "urlhaus": URLhausClient(),
         }
 

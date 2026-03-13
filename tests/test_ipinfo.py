@@ -212,7 +212,9 @@ async def test_ipv6_accepted(client):
 # -- API token validation -----------------------------------------------------
 
 def test_not_configured_without_token():
-    client = IPinfoClient(api_key="")
+    with patch("sources.ipinfo.settings") as mock_settings:
+        mock_settings.ipinfo_api_key = ""
+        client = IPinfoClient(api_key="")
     assert client.is_configured is False
 
 
@@ -224,7 +226,9 @@ def test_configured_with_token():
 @pytest.mark.asyncio
 async def test_missing_token_skips_lookup():
     """Lookup should return None immediately when no token is set."""
-    client = IPinfoClient(api_key="")
+    with patch("sources.ipinfo.settings") as mock_settings:
+        mock_settings.ipinfo_api_key = ""
+        client = IPinfoClient(api_key="")
 
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
         result = await client.lookup("1.2.3.4", "ip")

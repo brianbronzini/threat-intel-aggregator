@@ -214,7 +214,9 @@ async def test_ipv6_accepted(client):
 # -- API key validation --------------------------------------------------------
 
 def test_not_configured_without_key():
-    client = VirusTotalClient(api_key="")
+    with patch("sources.virustotal.settings") as mock_settings:
+        mock_settings.virustotal_api_key = ""
+        client = VirusTotalClient(api_key="")
     assert client.is_configured is False
 
 
@@ -225,7 +227,9 @@ def test_configured_with_key():
 
 @pytest.mark.asyncio
 async def test_missing_api_key_skips_lookup():
-    client = VirusTotalClient(api_key="")
+    with patch("sources.virustotal.settings") as mock_settings:
+        mock_settings.virustotal_api_key = ""
+        client = VirusTotalClient(api_key="")
 
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
         result = await client.lookup("1.2.3.4", "ip")
