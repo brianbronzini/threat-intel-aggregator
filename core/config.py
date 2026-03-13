@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     abuseipdb_api_key: str = ""
     virustotal_api_key: str = ""
     ipinfo_api_key: str = ""
+    threatfox_api_key: str = ""
 
     # Application
     log_level: str = "INFO"

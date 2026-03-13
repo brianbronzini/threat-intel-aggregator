@@ -1,5 +1,6 @@
 import logging
 
+from core.config import settings
 from sources.base import ThreatIntelSource
 
 logger = logging.getLogger(__name__)
@@ -12,12 +13,9 @@ VALID_IOC_TYPES = {"ip", "domain", "hash", "url"}
 
 
 class ThreatFoxClient(ThreatIntelSource):
-    """ThreatFox API client for IOC lookups across all indicator types.
+    """ThreatFox API client for IOC lookups.
 
-    ThreatFox is a community-driven IOC sharing platform tracking malware,
-    botnets, and C2 infrastructure. Supports IP, domain, hash, and URL lookups.
-    No API key or rate limits.
-
+    Requires free Auth-Key from https://abuse.ch/account/register/
     Docs: https://threatfox.abuse.ch/api/
     """
 
@@ -26,11 +24,11 @@ class ThreatFoxClient(ThreatIntelSource):
     daily_limit = 0
 
     def __init__(self, api_key: str = ""):
-        super().__init__("")
+        super().__init__(api_key or settings.threatfox_api_key)
 
     @property
     def is_configured(self) -> bool:
-        return True
+        return bool(self.api_key)
 
     async def lookup(self, indicator: str, ioc_type: str) -> dict | None:
         """Query ThreatFox for IOC matches across all indicator types.
@@ -50,7 +48,8 @@ class ThreatFoxClient(ThreatIntelSource):
             return None
 
         body = {"query": "search_ioc", "search_term": search_term, "exact_match": True}
-        data = await self._request("POST", self.base_url, json_body=body)
+        headers = {"Auth-Key": self.api_key} if self.api_key else {}
+        data = await self._request("POST", self.base_url, json_body=body, headers=headers)
         if data is None:
             return None
 

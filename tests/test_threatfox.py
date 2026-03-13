@@ -4,10 +4,12 @@ import pytest
 
 from sources.threatfox import ThreatFoxClient
 
+TEST_API_KEY = "test-threatfox-key"
+
 
 @pytest.fixture
 def client():
-    return ThreatFoxClient()
+    return ThreatFoxClient(api_key=TEST_API_KEY)
 
 
 def _make_match(
@@ -90,6 +92,7 @@ async def test_md5_hash_lookup(client):
         "POST",
         "https://threatfox-api.abuse.ch/api/v1/",
         json_body={"query": "search_ioc", "search_term": md5, "exact_match": True},
+        headers={"Auth-Key": TEST_API_KEY},
     )
 
 
@@ -106,6 +109,7 @@ async def test_sha256_hash_lookup(client):
         "POST",
         "https://threatfox-api.abuse.ch/api/v1/",
         json_body={"query": "search_ioc", "search_term": sha256, "exact_match": True},
+        headers={"Auth-Key": TEST_API_KEY},
     )
 
 
@@ -333,26 +337,57 @@ async def test_request_sends_correct_body(client):
         "POST",
         "https://threatfox-api.abuse.ch/api/v1/",
         json_body={"query": "search_ioc", "search_term": "evil.com", "exact_match": True},
+        headers={"Auth-Key": TEST_API_KEY},
     )
 
 
 # -- Configuration ------------------------------------------------------------
 
-def test_always_configured():
-    client = ThreatFoxClient()
+def test_configured_with_api_key():
+    client = ThreatFoxClient(api_key="my-key")
     assert client.is_configured is True
+    assert client.api_key == "my-key"
+
+
+def test_not_configured_without_api_key():
+    with patch("sources.threatfox.settings") as mock_settings:
+        mock_settings.threatfox_api_key = ""
+        client = ThreatFoxClient()
+    assert client.is_configured is False
+    assert client.api_key == ""
 
 
 def test_no_rate_limit():
-    client = ThreatFoxClient()
+    client = ThreatFoxClient(api_key="key")
     assert client.daily_limit == 0
 
 
 def test_source_name():
-    client = ThreatFoxClient()
+    client = ThreatFoxClient(api_key="key")
     assert client.source_name == "threatfox"
 
 
-def test_ignores_api_key():
-    client = ThreatFoxClient(api_key="ignored")
-    assert client.api_key == ""
+def test_uses_settings_key_by_default():
+    with patch("sources.threatfox.settings") as mock_settings:
+        mock_settings.threatfox_api_key = "from-settings"
+        client = ThreatFoxClient()
+    assert client.api_key == "from-settings"
+
+
+@pytest.mark.asyncio
+async def test_no_auth_header_without_key():
+    """When no API key is set, headers dict should be empty."""
+    with patch("sources.threatfox.settings") as mock_settings:
+        mock_settings.threatfox_api_key = ""
+        client = ThreatFoxClient()
+
+    mock_resp = _make_response(query_status="no_result")
+    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+        await client.lookup("1.2.3.4", "ip")
+
+    mock_req.assert_called_once_with(
+        "POST",
+        "https://threatfox-api.abuse.ch/api/v1/",
+        json_body={"query": "search_ioc", "search_term": "1.2.3.4", "exact_match": True},
+        headers={},
+    )
