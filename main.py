@@ -1,30 +1,44 @@
 import logging
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
+from api.routes import router
 from core.config import settings, setup_logging
 from db.models import init_db
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    setup_logging(settings.log_level)
+    await init_db()
+    logger.info(
+        "Threat Intel Aggregator started on %s:%d",
+        settings.api_host,
+        settings.api_port,
+    )
+    yield
+
+
 app = FastAPI(
     title="Threat Intel Aggregator",
     description="Multi-source threat intelligence enrichment API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.on_event("startup")
-async def startup() -> None:
-    setup_logging(settings.log_level)
-    await init_db()
-    logger.info("Threat Intel Aggregator started")
-
-
-@app.get("/health")
-async def health() -> dict:
-    return {"status": "ok"}
+app.include_router(router)
 
 
 if __name__ == "__main__":

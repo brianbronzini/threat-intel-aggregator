@@ -8,6 +8,9 @@ class IOCRequest(BaseModel):
         ..., pattern="^(ip|domain|hash|url)$",
         description="Type of IOC: ip, domain, hash, or url",
     )
+    force_refresh: bool = Field(
+        False, description="Bypass cache and query sources directly",
+    )
 
 
 class IOCResponse(BaseModel):
