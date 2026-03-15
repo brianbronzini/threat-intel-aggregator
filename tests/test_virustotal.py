@@ -42,11 +42,14 @@ def _make_response(
 
 # -- Detection count thresholds ------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_zero_detections(client):
     mock_resp = _make_response(malicious=0, harmless=70, undetected=3)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("8.8.8.8", "ip")
 
     assert result is not None
@@ -61,7 +64,9 @@ async def test_zero_detections(client):
 async def test_low_detections_not_malicious(client):
     mock_resp = _make_response(malicious=3, harmless=65, undetected=5)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is False
@@ -73,7 +78,9 @@ async def test_boundary_5_not_malicious(client):
     """Exactly 5 malicious -- NOT malicious (threshold is > 5)."""
     mock_resp = _make_response(malicious=5, harmless=60, undetected=8)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("10.0.0.1", "ip")
 
     assert result["is_malicious"] is False
@@ -85,7 +92,9 @@ async def test_boundary_6_is_malicious(client):
     """6 malicious -- IS malicious (> 5)."""
     mock_resp = _make_response(malicious=6, harmless=60, undetected=7)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("10.0.0.2", "ip")
 
     assert result["is_malicious"] is True
@@ -96,7 +105,9 @@ async def test_boundary_6_is_malicious(client):
 async def test_high_detections(client):
     mock_resp = _make_response(malicious=10, suspicious=3, harmless=55, undetected=5)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("45.148.10.86", "ip")
 
     assert result["is_malicious"] is True
@@ -108,11 +119,14 @@ async def test_high_detections(client):
 
 # -- Suspicious-only results --------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_suspicious_only_not_malicious(client):
     mock_resp = _make_response(malicious=0, suspicious=15, harmless=50, undetected=8)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("203.0.113.50", "ip")
 
     assert result["is_malicious"] is False
@@ -122,11 +136,14 @@ async def test_suspicious_only_not_malicious(client):
 
 # -- Detection rate calculation ------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_detection_rate_percentage(client):
     mock_resp = _make_response(malicious=7, suspicious=0, harmless=63, undetected=0)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("5.6.7.8", "ip")
 
     assert result["detection_rate"] == 10.0  # 7/70 = 10%
@@ -136,7 +153,9 @@ async def test_detection_rate_percentage(client):
 async def test_detection_rate_zero_total(client):
     mock_resp = _make_response(malicious=0, suspicious=0, harmless=0, undetected=0)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("192.0.2.1", "ip")
 
     assert result["detection_rate"] == 0.0
@@ -145,11 +164,16 @@ async def test_detection_rate_zero_total(client):
 
 # -- Metadata extraction -------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_full_metadata(client):
-    mock_resp = _make_response(malicious=0, country="DE", as_owner="Hetzner Online GmbH", network="5.9.0.0/16")
+    mock_resp = _make_response(
+        malicious=0, country="DE", as_owner="Hetzner Online GmbH", network="5.9.0.0/16"
+    )
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("5.9.10.11", "ip")
 
     assert result["country"] == "DE"
@@ -159,9 +183,22 @@ async def test_full_metadata(client):
 
 @pytest.mark.asyncio
 async def test_missing_metadata_defaults(client):
-    mock_resp = {"data": {"attributes": {"last_analysis_stats": {"malicious": 0, "suspicious": 0, "harmless": 0, "undetected": 0}}}}
+    mock_resp = {
+        "data": {
+            "attributes": {
+                "last_analysis_stats": {
+                    "malicious": 0,
+                    "suspicious": 0,
+                    "harmless": 0,
+                    "undetected": 0,
+                }
+            }
+        }
+    }
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("10.0.0.1", "ip")
 
     assert result["country"] == ""
@@ -170,6 +207,7 @@ async def test_missing_metadata_defaults(client):
 
 
 # -- Non-IP IOC types ----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_domain_returns_none(client):
@@ -191,6 +229,7 @@ async def test_url_returns_none(client):
 
 # -- Input validation ----------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_invalid_ip_format(client):
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
@@ -204,7 +243,9 @@ async def test_invalid_ip_format(client):
 async def test_ipv6_accepted(client):
     mock_resp = _make_response(malicious=1, country="JP")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("2001:db8::1", "ip")
 
     assert result is not None
@@ -212,6 +253,7 @@ async def test_ipv6_accepted(client):
 
 
 # -- API key validation --------------------------------------------------------
+
 
 def test_not_configured_without_key():
     with patch("sources.virustotal.settings") as mock_settings:
@@ -240,6 +282,7 @@ async def test_missing_api_key_skips_lookup():
 
 # -- API errors ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_api_failure_returns_none(client):
     with patch.object(client, "_request", new_callable=AsyncMock, return_value=None):
@@ -252,7 +295,9 @@ async def test_api_failure_returns_none(client):
 async def test_request_passes_correct_headers(client):
     mock_resp = _make_response()
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         await client.lookup("9.9.9.9", "ip")
 
     mock_req.assert_called_once_with(
@@ -263,6 +308,7 @@ async def test_request_passes_correct_headers(client):
 
 
 # -- Retry on server error -----------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_retry_on_500(client):
@@ -280,11 +326,19 @@ async def test_retry_on_500(client):
     mock_session = AsyncMock()
     mock_session.request = MagicMock(side_effect=[mock_resp_500, mock_resp_200])
 
-    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=mock_session), \
-         patch.object(client, "_check_rate_limit", new_callable=AsyncMock, return_value=True), \
-         patch.object(client, "_record_request", new_callable=AsyncMock), \
-         patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await client._request("GET", "https://www.virustotal.com/api/v3/ip_addresses/1.2.3.4")
+    with (
+        patch.object(
+            client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+        ),
+        patch.object(
+            client, "_check_rate_limit", new_callable=AsyncMock, return_value=True
+        ),
+        patch.object(client, "_record_request", new_callable=AsyncMock),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        result = await client._request(
+            "GET", "https://www.virustotal.com/api/v3/ip_addresses/1.2.3.4"
+        )
 
     assert result == _make_response(malicious=2)
     assert mock_session.request.call_count == 2
@@ -297,6 +351,7 @@ async def test_retry_on_500(client):
 # ==============================================================================
 
 # -- Per-minute sliding window -------------------------------------------------
+
 
 class TestMinuteRateLimit:
     """Tests for the per-minute sliding window (4 req/min)."""
@@ -352,6 +407,7 @@ class TestMinuteRateLimit:
 
 # -- Daily rate limit ----------------------------------------------------------
 
+
 class TestDailyRateLimit:
     """Tests for the daily limit (500/day) via the base class RateLimitTracker."""
 
@@ -362,7 +418,8 @@ class TestDailyRateLimit:
 
         with patch(
             "sources.base.ThreatIntelSource._check_rate_limit",
-            new_callable=AsyncMock, return_value=False,
+            new_callable=AsyncMock,
+            return_value=False,
         ):
             result = await client._check_rate_limit()
 
@@ -375,7 +432,8 @@ class TestDailyRateLimit:
 
         with patch(
             "sources.base.ThreatIntelSource._check_rate_limit",
-            new_callable=AsyncMock, return_value=True,
+            new_callable=AsyncMock,
+            return_value=True,
         ):
             result = await client._check_rate_limit()
 
@@ -383,6 +441,7 @@ class TestDailyRateLimit:
 
 
 # -- Both limits enforced simultaneously --------------------------------------
+
 
 class TestDualRateLimiting:
     """Tests that both limits are checked and enforced together."""
@@ -411,7 +470,8 @@ class TestDualRateLimiting:
 
         with patch(
             "sources.base.ThreatIntelSource._check_rate_limit",
-            new_callable=AsyncMock, return_value=True,
+            new_callable=AsyncMock,
+            return_value=True,
         ) as daily_mock:
             result = await client._check_rate_limit()
 
@@ -424,9 +484,15 @@ class TestDualRateLimiting:
         client = VirusTotalClient(api_key="key")
         mock_resp = _make_response(malicious=2)
 
-        with patch.object(client, "_check_rate_limit", new_callable=AsyncMock, return_value=True), \
-             patch.object(client, "_record_request", new_callable=AsyncMock):
-            with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+        with (
+            patch.object(
+                client, "_check_rate_limit", new_callable=AsyncMock, return_value=True
+            ),
+            patch.object(client, "_record_request", new_callable=AsyncMock),
+        ):
+            with patch.object(
+                client, "_request", new_callable=AsyncMock, return_value=mock_resp
+            ):
                 result = await client.lookup("1.2.3.4", "ip")
 
         assert result is not None
@@ -442,7 +508,8 @@ class TestDualRateLimiting:
         # _check_rate_limit (overridden) will fail on minute check
         with patch(
             "sources.base.ThreatIntelSource._check_rate_limit",
-            new_callable=AsyncMock, return_value=True,
+            new_callable=AsyncMock,
+            return_value=True,
         ):
             result = await client.lookup("1.2.3.4", "ip")
 
@@ -455,7 +522,8 @@ class TestDualRateLimiting:
 
         with patch(
             "sources.base.ThreatIntelSource._check_rate_limit",
-            new_callable=AsyncMock, return_value=False,
+            new_callable=AsyncMock,
+            return_value=False,
         ):
             result = await client.lookup("1.2.3.4", "ip")
 
@@ -481,9 +549,22 @@ class TestDualRateLimiting:
         mock_session.request = MagicMock(return_value=mock_http_resp)
 
         results = []
-        with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=mock_session), \
-             patch("sources.base.ThreatIntelSource._check_rate_limit", new_callable=AsyncMock, return_value=True), \
-             patch("sources.base.ThreatIntelSource._record_request", new_callable=AsyncMock):
+        with (
+            patch.object(
+                client,
+                "_get_session",
+                new_callable=AsyncMock,
+                return_value=mock_session,
+            ),
+            patch(
+                "sources.base.ThreatIntelSource._check_rate_limit",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+            patch(
+                "sources.base.ThreatIntelSource._record_request", new_callable=AsyncMock
+            ),
+        ):
             for i in range(5):
                 result = await client.lookup(f"1.2.3.{i}", "ip")
                 results.append(result)
@@ -527,7 +608,8 @@ class TestDualRateLimiting:
         # Minute check should pass (old timestamps evicted)
         with patch(
             "sources.base.ThreatIntelSource._check_rate_limit",
-            new_callable=AsyncMock, return_value=True,
+            new_callable=AsyncMock,
+            return_value=True,
         ):
             result = await client._check_rate_limit()
 
@@ -535,6 +617,7 @@ class TestDualRateLimiting:
 
 
 # -- Source attributes ---------------------------------------------------------
+
 
 def test_source_name():
     client = VirusTotalClient(api_key="key")

@@ -1,6 +1,5 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import aiohttp
 import pytest
 
 from sources.abuseipdb import AbuseIPDBClient
@@ -40,12 +39,17 @@ def _make_response(
 
 # -- Confidence score thresholds -----------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_high_confidence_malicious(client):
     """abuseConfidenceScore > 75 should flag as malicious."""
-    mock_resp = _make_response(confidence=92, total_reports=347, last_reported="2024-01-15T10:00:00+00:00")
+    mock_resp = _make_response(
+        confidence=92, total_reports=347, last_reported="2024-01-15T10:00:00+00:00"
+    )
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("45.148.10.86", "ip")
 
     assert result is not None
@@ -61,7 +65,9 @@ async def test_medium_confidence_not_malicious(client):
     """abuseConfidenceScore 50-75 is suspicious but not malicious."""
     mock_resp = _make_response(confidence=62, total_reports=15)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("203.0.113.50", "ip")
 
     assert result is not None
@@ -75,7 +81,9 @@ async def test_low_confidence_clean(client):
     """abuseConfidenceScore < 50 is not malicious."""
     mock_resp = _make_response(confidence=5, total_reports=1)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("198.51.100.10", "ip")
 
     assert result is not None
@@ -88,7 +96,9 @@ async def test_zero_confidence(client):
     """abuseConfidenceScore of 0 with no reports."""
     mock_resp = _make_response(confidence=0, total_reports=0)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("8.8.8.8", "ip")
 
     assert result is not None
@@ -103,7 +113,9 @@ async def test_boundary_75_not_malicious(client):
     """Exactly 75 should NOT be malicious (threshold is > 75)."""
     mock_resp = _make_response(confidence=75)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("10.0.0.1", "ip")
 
     assert result["is_malicious"] is False
@@ -114,7 +126,9 @@ async def test_boundary_76_is_malicious(client):
     """76 should be malicious (> 75)."""
     mock_resp = _make_response(confidence=76)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("10.0.0.2", "ip")
 
     assert result["is_malicious"] is True
@@ -122,12 +136,15 @@ async def test_boundary_76_is_malicious(client):
 
 # -- Whitelisted IP ------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_whitelisted_ip(client):
     """Whitelisted IPs should have is_whitelisted=True regardless of score."""
     mock_resp = _make_response(confidence=0, whitelisted=True)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("8.8.4.4", "ip")
 
     assert result is not None
@@ -136,6 +153,7 @@ async def test_whitelisted_ip(client):
 
 
 # -- Metadata extraction -------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_full_metadata(client):
@@ -148,7 +166,9 @@ async def test_full_metadata(client):
         usage_type="Fixed Line ISP",
     )
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("5.6.7.8", "ip")
 
     assert result["country_code"] == "RU"
@@ -158,6 +178,7 @@ async def test_full_metadata(client):
 
 
 # -- Non-IP IOC types ----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_domain_returns_none(client):
@@ -179,6 +200,7 @@ async def test_url_returns_none(client):
 
 # -- Input validation ----------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_invalid_ip_format(client):
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
@@ -192,7 +214,9 @@ async def test_invalid_ip_format(client):
 async def test_ipv6_accepted(client):
     mock_resp = _make_response(confidence=30, country="DE")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("2001:db8::1", "ip")
 
     assert result is not None
@@ -200,6 +224,7 @@ async def test_ipv6_accepted(client):
 
 
 # -- API key validation --------------------------------------------------------
+
 
 def test_not_configured_without_key():
     with patch("sources.abuseipdb.settings") as mock_settings:
@@ -229,6 +254,7 @@ async def test_missing_api_key_skips_lookup():
 
 # -- API errors ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_api_failure_returns_none(client):
     with patch.object(client, "_request", new_callable=AsyncMock, return_value=None):
@@ -242,7 +268,9 @@ async def test_request_passes_correct_headers_and_params(client):
     """Verify the correct headers and query params are sent."""
     mock_resp = _make_response(confidence=10)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         await client.lookup("9.9.9.9", "ip")
 
     mock_req.assert_called_once_with(
@@ -270,10 +298,16 @@ async def test_retry_on_server_error(client):
     mock_session = AsyncMock()
     mock_session.request = MagicMock(side_effect=[mock_resp_500, mock_resp_200])
 
-    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=mock_session), \
-         patch.object(client, "_check_rate_limit", new_callable=AsyncMock, return_value=True), \
-         patch.object(client, "_record_request", new_callable=AsyncMock), \
-         patch("asyncio.sleep", new_callable=AsyncMock):
+    with (
+        patch.object(
+            client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+        ),
+        patch.object(
+            client, "_check_rate_limit", new_callable=AsyncMock, return_value=True
+        ),
+        patch.object(client, "_record_request", new_callable=AsyncMock),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         result = await client._request("GET", "https://api.abuseipdb.com/api/v2/check")
 
     assert result == _make_response(confidence=50)
@@ -285,15 +319,16 @@ async def test_retry_on_server_error(client):
 @pytest.mark.asyncio
 async def test_rate_limit_blocks_request(client):
     """When rate limit is exhausted, _request should return None without HTTP call."""
-    mock_session = AsyncMock()
-
-    with patch.object(client, "_check_rate_limit", new_callable=AsyncMock, return_value=False):
+    with patch.object(
+        client, "_check_rate_limit", new_callable=AsyncMock, return_value=False
+    ):
         result = await client._request("GET", "https://api.abuseipdb.com/api/v2/check")
 
     assert result is None
 
 
 # -- Source attributes ---------------------------------------------------------
+
 
 def test_source_name():
     client = AbuseIPDBClient(api_key="key")

@@ -36,13 +36,16 @@ def _make_response(
 
 # -- Online (malicious) URL ----------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_online_malware_url(client):
     mock_resp = _make_response(
         url_status="online", threat="malware_download", tags=["elf", "mirai"]
     )
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("https://evil.com/payload.exe", "url")
 
     assert result is not None
@@ -56,11 +59,14 @@ async def test_online_malware_url(client):
 
 # -- Offline URL ---------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_offline_url(client):
     mock_resp = _make_response(url_status="offline")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("https://taken-down.com/bad.exe", "url")
 
     assert result["is_malicious"] is False
@@ -69,11 +75,14 @@ async def test_offline_url(client):
 
 # -- No results (URL not in database) -----------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_no_results(client):
     mock_resp = {"query_status": "no_results"}
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("https://clean-site.com/index.html", "url")
 
     assert result is not None
@@ -85,12 +94,15 @@ async def test_no_results(client):
 
 # -- Null fields in response ---------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_null_url_status(client):
     """url_status can be null in the API response."""
     mock_resp = _make_response(url_status=None, threat=None, tags=None)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("https://mystery.com/file", "url")
 
     assert result["is_malicious"] is False
@@ -100,6 +112,7 @@ async def test_null_url_status(client):
 
 
 # -- IOC type filtering --------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_ip_type_rejected(client):
@@ -120,6 +133,7 @@ async def test_hash_type_rejected(client):
 
 
 # -- URL validation ------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_invalid_url_no_scheme(client):
@@ -152,7 +166,9 @@ async def test_invalid_url_ftp_scheme(client):
 async def test_valid_http_url(client):
     mock_resp = _make_response(url_status="online")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("http://evil.com/payload", "url")
 
     assert result is not None
@@ -163,13 +179,16 @@ async def test_valid_http_url(client):
 async def test_valid_https_url(client):
     mock_resp = _make_response(url_status="offline")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("https://evil.com/payload", "url")
 
     assert result is not None
 
 
 # -- API errors ----------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_api_failure_returns_none(client):
@@ -183,7 +202,9 @@ async def test_api_failure_returns_none(client):
 async def test_request_sends_post_with_url(client):
     mock_resp = _make_response()
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         await client.lookup("https://evil.com/payload.exe", "url")
 
     mock_req.assert_called_once_with(
@@ -194,6 +215,7 @@ async def test_request_sends_post_with_url(client):
 
 
 # -- Configuration ------------------------------------------------------------
+
 
 def test_always_configured():
     client = URLhausClient()

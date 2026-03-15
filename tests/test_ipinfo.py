@@ -42,11 +42,14 @@ def _make_response(
 
 # -- Full response -------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_full_response(client):
     mock_resp = _make_response()
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("8.8.8.8", "ip")
 
     assert result is not None
@@ -67,12 +70,15 @@ async def test_full_response(client):
 
 # -- Minimal response ---------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_minimal_response(client):
     """Response with only IP and country_code -- other fields missing."""
     mock_resp = {"ip": "1.2.3.4", "country_code": "DE"}
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["country_code"] == "DE"
@@ -88,11 +94,14 @@ async def test_minimal_response(client):
 
 # -- Bogon/private IP ---------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_bogon_private_ip(client):
     mock_resp = _make_response(ip="192.168.1.1", bogon=True)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("192.168.1.1", "ip")
 
     assert result is not None
@@ -106,11 +115,14 @@ async def test_bogon_private_ip(client):
 
 # -- is_malicious always False -------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_is_malicious_always_false(client):
     mock_resp = _make_response()
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is False
@@ -120,7 +132,9 @@ async def test_is_malicious_always_false(client):
 async def test_bogon_is_malicious_false(client):
     mock_resp = _make_response(bogon=True)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("10.0.0.1", "ip")
 
     assert result["is_malicious"] is False
@@ -128,12 +142,15 @@ async def test_bogon_is_malicious_false(client):
 
 # -- ASN field -----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_asn_from_response(client):
     """Lite API returns asn as a direct field."""
     mock_resp = _make_response(asn="AS13335")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.1.1.1", "ip")
 
     assert result["asn"] == "AS13335"
@@ -143,13 +160,16 @@ async def test_asn_from_response(client):
 async def test_asn_missing_defaults_empty(client):
     mock_resp = {"ip": "1.2.3.4"}
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["asn"] == ""
 
 
 # -- Lat/long parsing ---------------------------------------------------------
+
 
 def test_parse_loc_standard():
     assert IPinfoClient._parse_loc("37.4056,-122.0775") == ("37.4056", "-122.0775")
@@ -168,6 +188,7 @@ def test_parse_loc_no_comma():
 
 
 # -- IOC type filtering --------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_domain_rejected(client):
@@ -189,6 +210,7 @@ async def test_url_rejected(client):
 
 # -- IP validation -------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_invalid_ip(client):
     with patch.object(client, "_request", new_callable=AsyncMock) as mock_req:
@@ -202,7 +224,9 @@ async def test_invalid_ip(client):
 async def test_ipv6_accepted(client):
     mock_resp = _make_response(ip="2607:f8b0:4004:800::200e", country_code="US")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("2607:f8b0:4004:800::200e", "ip")
 
     assert result is not None
@@ -210,6 +234,7 @@ async def test_ipv6_accepted(client):
 
 
 # -- API token validation -----------------------------------------------------
+
 
 def test_not_configured_without_token():
     with patch("sources.ipinfo.settings") as mock_settings:
@@ -239,11 +264,14 @@ async def test_missing_token_skips_lookup():
 
 # -- Auth header ---------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_bearer_auth_header(client):
     mock_resp = _make_response()
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         await client.lookup("8.8.8.8", "ip")
 
     mock_req.assert_called_once_with(
@@ -258,6 +286,7 @@ async def test_bearer_auth_header(client):
 
 # -- Rate limits ---------------------------------------------------------------
 
+
 def test_unlimited_rate_limit():
     """Lite tier has no rate limit."""
     client = IPinfoClient(api_key="token")
@@ -265,6 +294,7 @@ def test_unlimited_rate_limit():
 
 
 # -- API errors ----------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_api_failure_returns_none(client):
@@ -275,6 +305,7 @@ async def test_api_failure_returns_none(client):
 
 
 # -- Source attributes ---------------------------------------------------------
+
 
 def test_source_name():
     client = IPinfoClient()

@@ -130,7 +130,9 @@ class RateLimitTracker:
     """Tracks daily API request counts per source."""
 
     @staticmethod
-    async def init_source(db: aiosqlite.Connection, source: str, daily_limit: int) -> None:
+    async def init_source(
+        db: aiosqlite.Connection, source: str, daily_limit: int
+    ) -> None:
         """Register a source with its daily rate limit."""
         now = datetime.now(timezone.utc).isoformat()
         await db.execute(

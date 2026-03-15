@@ -79,9 +79,7 @@ def calculate_reputation(source_results: dict[str, dict | None]) -> dict:
             sources_flagged.append("urlhaus")
 
     # Total and classify
-    total = sum(
-        v for k, v in breakdown.items() if k != "total"
-    )
+    total = sum(v for k, v in breakdown.items() if k != "total")
     breakdown["total"] = total
 
     if total >= 70:

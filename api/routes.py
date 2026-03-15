@@ -69,7 +69,7 @@ async def enrich(request: IOCRequest) -> dict:
         return result
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
+    except Exception:
         logger.exception("Enrichment failed for %s", request.indicator)
         raise HTTPException(status_code=500, detail="Internal server error")
 

@@ -94,9 +94,7 @@ class ThreatIntelAggregator:
         if ioc_type not in validators:
             raise ValueError(f"Unknown IOC type: {ioc_type!r}")
         if not validators[ioc_type](indicator):
-            raise ValueError(
-                f"Invalid {ioc_type} indicator: {indicator!r}"
-            )
+            raise ValueError(f"Invalid {ioc_type} indicator: {indicator!r}")
 
     # ------------------------------------------------------------------
     # Cache reconstruction
@@ -114,8 +112,18 @@ class ThreatIntelAggregator:
         enrichment = {}
         ipinfo_data = source_results.get("ipinfo")
         if ipinfo_data:
-            for key in ("country", "country_code", "city", "region", "org", "asn",
-                        "latitude", "longitude", "timezone", "postal"):
+            for key in (
+                "country",
+                "country_code",
+                "city",
+                "region",
+                "org",
+                "asn",
+                "latitude",
+                "longitude",
+                "timezone",
+                "postal",
+            ):
                 if key in ipinfo_data:
                     enrichment[key] = ipinfo_data[key]
 
@@ -204,8 +212,18 @@ class ThreatIntelAggregator:
         enrichment = {}
         ipinfo_data = source_results.get("ipinfo")
         if ipinfo_data:
-            for key in ("country", "country_code", "city", "region", "org", "asn",
-                        "latitude", "longitude", "timezone", "postal"):
+            for key in (
+                "country",
+                "country_code",
+                "city",
+                "region",
+                "org",
+                "asn",
+                "latitude",
+                "longitude",
+                "timezone",
+                "postal",
+            ):
                 if key in ipinfo_data:
                     enrichment[key] = ipinfo_data[key]
 

@@ -50,7 +50,9 @@ class VirusTotalClient(ThreatIntelSource):
     def _check_minute_rate(self) -> bool:
         """Return True if under the per-minute sliding window limit."""
         now = time.monotonic()
-        while self._minute_timestamps and now - self._minute_timestamps[0] > MINUTE_WINDOW:
+        while (
+            self._minute_timestamps and now - self._minute_timestamps[0] > MINUTE_WINDOW
+        ):
             self._minute_timestamps.popleft()
         return len(self._minute_timestamps) < REQUESTS_PER_MINUTE
 
@@ -67,15 +69,15 @@ class VirusTotalClient(ThreatIntelSource):
         if not self._check_minute_rate():
             logger.warning(
                 "VirusTotal per-minute rate limit hit (%d/%d in last %ds)",
-                REQUESTS_PER_MINUTE, REQUESTS_PER_MINUTE, MINUTE_WINDOW,
+                REQUESTS_PER_MINUTE,
+                REQUESTS_PER_MINUTE,
+                MINUTE_WINDOW,
             )
             return False
 
         daily_ok = await super()._check_rate_limit()
         if not daily_ok:
-            logger.warning(
-                "VirusTotal daily rate limit hit (%d/day)", self.daily_limit
-            )
+            logger.warning("VirusTotal daily rate limit hit (%d/day)", self.daily_limit)
             return False
 
         return True

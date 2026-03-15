@@ -1,4 +1,3 @@
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
@@ -14,6 +13,7 @@ def client():
 
 # -- Successful responses -----------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_malicious_ip(client):
     """IP classified as malicious by GreyNoise."""
@@ -28,7 +28,9 @@ async def test_malicious_ip(client):
         "message": "Success",
     }
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_response):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_response
+    ):
         result = await client.lookup("45.148.10.86", "ip")
 
     assert result is not None
@@ -53,7 +55,9 @@ async def test_noise_scanner_ip(client):
         "message": "Success",
     }
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_response):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_response
+    ):
         result = await client.lookup("71.6.135.131", "ip")
 
     assert result is not None
@@ -78,7 +82,9 @@ async def test_riot_ip(client):
         "message": "Success",
     }
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_response):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_response
+    ):
         result = await client.lookup("8.8.8.8", "ip")
 
     assert result is not None
@@ -89,6 +95,7 @@ async def test_riot_ip(client):
 
 
 # -- Not found / unknown IP ---------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_ip_not_seen(client):
@@ -104,7 +111,9 @@ async def test_ip_not_seen(client):
         "message": "IP not observed scanning the internet or contained in RIOT data set.",
     }
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_response):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_response
+    ):
         result = await client.lookup("192.168.1.1", "ip")
 
     assert result is not None
@@ -114,6 +123,7 @@ async def test_ip_not_seen(client):
 
 
 # -- Non-IP IOC types ---------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_domain_lookup_returns_none(client):
@@ -129,6 +139,7 @@ async def test_hash_lookup_returns_none(client):
 
 
 # -- Input validation ----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_invalid_ip_format(client):
@@ -153,7 +164,9 @@ async def test_ipv6_valid(client):
         "message": "Success",
     }
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_response):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_response
+    ):
         result = await client.lookup("2607:f8b0:4004:800::200e", "ip")
 
     assert result is not None
@@ -161,6 +174,7 @@ async def test_ipv6_valid(client):
 
 
 # -- API errors ----------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_api_returns_none_on_failure(client):
@@ -189,7 +203,9 @@ async def test_retry_on_server_error(client):
         "message": "Success",
     }
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_response):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_response
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result is not None
@@ -216,11 +232,19 @@ async def test_retry_logic_in_base_request():
     mock_resp_200.__aexit__ = AsyncMock(return_value=False)
 
     mock_session = AsyncMock()
-    mock_session.request = MagicMock(side_effect=[mock_resp_500, mock_resp_500, mock_resp_200])
+    mock_session.request = MagicMock(
+        side_effect=[mock_resp_500, mock_resp_500, mock_resp_200]
+    )
 
-    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=mock_session), \
-         patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-        result = await client._request("GET", "https://api.greynoise.io/v3/community/1.2.3.4")
+    with (
+        patch.object(
+            client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+        ),
+        patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+    ):
+        result = await client._request(
+            "GET", "https://api.greynoise.io/v3/community/1.2.3.4"
+        )
 
     assert result == {"ip": "1.2.3.4", "noise": True}
     assert mock_session.request.call_count == 3
@@ -245,9 +269,15 @@ async def test_retry_exhaustion_returns_none():
     mock_session = AsyncMock()
     mock_session.request = MagicMock(return_value=mock_resp_500)
 
-    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=mock_session), \
-         patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await client._request("GET", "https://api.greynoise.io/v3/community/1.2.3.4")
+    with (
+        patch.object(
+            client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+        ),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        result = await client._request(
+            "GET", "https://api.greynoise.io/v3/community/1.2.3.4"
+        )
 
     assert result is None
     assert mock_session.request.call_count == 3
@@ -271,9 +301,15 @@ async def test_connection_error_triggers_retry():
         side_effect=[aiohttp.ClientError("Connection refused"), mock_resp_200]
     )
 
-    with patch.object(client, "_get_session", new_callable=AsyncMock, return_value=mock_session), \
-         patch("asyncio.sleep", new_callable=AsyncMock):
-        result = await client._request("GET", "https://api.greynoise.io/v3/community/1.2.3.4")
+    with (
+        patch.object(
+            client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+        ),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        result = await client._request(
+            "GET", "https://api.greynoise.io/v3/community/1.2.3.4"
+        )
 
     assert result == {"ip": "1.2.3.4", "noise": False}
     assert mock_session.request.call_count == 2
@@ -282,6 +318,7 @@ async def test_connection_error_triggers_retry():
 
 
 # -- Configuration ------------------------------------------------------------
+
 
 def test_is_always_configured():
     """Community API needs no key, so is_configured should always be True."""

@@ -49,7 +49,9 @@ class ThreatFoxClient(ThreatIntelSource):
 
         body = {"query": "search_ioc", "search_term": search_term, "exact_match": True}
         headers = {"Auth-Key": self.api_key} if self.api_key else {}
-        data = await self._request("POST", self.base_url, json_body=body, headers=headers)
+        data = await self._request(
+            "POST", self.base_url, json_body=body, headers=headers
+        )
         if data is None:
             return None
 
@@ -69,7 +71,8 @@ class ThreatFoxClient(ThreatIntelSource):
             if len(indicator) not in (32, 64):
                 logger.warning(
                     "Invalid hash length %d (expected 32 for MD5 or 64 for SHA256): %s",
-                    len(indicator), indicator,
+                    len(indicator),
+                    indicator,
                 )
                 return None
         return indicator

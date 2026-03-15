@@ -44,11 +44,14 @@ def _make_response(matches: list[dict] | None = None, query_status: str = "ok") 
 
 # -- IOC type support ----------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_ip_lookup(client):
     mock_resp = _make_response([_make_match(ioc_type="ip:port")])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result is not None
@@ -61,7 +64,9 @@ async def test_ip_lookup(client):
 async def test_domain_lookup(client):
     mock_resp = _make_response([_make_match(ioc_type="domain")])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("evil.example.com", "domain")
 
     assert result is not None
@@ -72,7 +77,9 @@ async def test_domain_lookup(client):
 async def test_url_lookup(client):
     mock_resp = _make_response([_make_match(ioc_type="url")])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("https://evil.com/payload", "url")
 
     assert result is not None
@@ -84,7 +91,9 @@ async def test_md5_hash_lookup(client):
     md5 = "d41d8cd98f00b204e9800998ecf8427e"
     mock_resp = _make_response([_make_match(ioc_type="md5_hash")])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         result = await client.lookup(md5, "hash")
 
     assert result is not None
@@ -101,7 +110,9 @@ async def test_sha256_hash_lookup(client):
     sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     mock_resp = _make_response([_make_match(ioc_type="sha256_hash")])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         result = await client.lookup(sha256, "hash")
 
     assert result is not None
@@ -114,6 +125,7 @@ async def test_sha256_hash_lookup(client):
 
 
 # -- Hash validation -----------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_invalid_hash_length(client):
@@ -144,11 +156,14 @@ async def test_invalid_ioc_type(client):
 
 # -- Confidence thresholds -----------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_confidence_49_not_malicious(client):
     mock_resp = _make_response([_make_match(confidence=49)])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is False
@@ -159,7 +174,9 @@ async def test_confidence_49_not_malicious(client):
 async def test_confidence_50_is_malicious(client):
     mock_resp = _make_response([_make_match(confidence=50)])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is True
@@ -170,7 +187,9 @@ async def test_confidence_50_is_malicious(client):
 async def test_confidence_0(client):
     mock_resp = _make_response([_make_match(confidence=0)])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is False
@@ -181,7 +200,9 @@ async def test_confidence_0(client):
 async def test_confidence_100(client):
     mock_resp = _make_response([_make_match(confidence=100)])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is True
@@ -190,11 +211,14 @@ async def test_confidence_100(client):
 
 # -- No results ----------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_no_result_status(client):
     mock_resp = {"query_status": "no_result", "data": None}
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("8.8.8.8", "ip")
 
     assert result is not None
@@ -213,7 +237,9 @@ async def test_ok_status_empty_data(client):
     """query_status is 'ok' but data is an empty list."""
     mock_resp = {"query_status": "ok", "data": []}
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("8.8.8.8", "ip")
 
     assert result["is_malicious"] is False
@@ -221,6 +247,7 @@ async def test_ok_status_empty_data(client):
 
 
 # -- Multiple matches (aggregation) -------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_multiple_matches_aggregation(client):
@@ -253,7 +280,9 @@ async def test_multiple_matches_aggregation(client):
     ]
     mock_resp = _make_response(matches)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["match_count"] == 3
@@ -279,7 +308,9 @@ async def test_multiple_matches_all_low_confidence(client):
     ]
     mock_resp = _make_response(matches)
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is False
@@ -288,13 +319,16 @@ async def test_multiple_matches_all_low_confidence(client):
 
 # -- Null/missing fields in matches -------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_match_with_null_tags(client):
     match = _make_match(tags=None)
     match["tags"] = None  # Simulate actual null from API
     mock_resp = _make_response([match])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["tags"] == []
@@ -306,7 +340,9 @@ async def test_match_with_missing_fields(client):
     minimal_match = {"confidence_level": 70}
     mock_resp = _make_response([minimal_match])
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp):
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ):
         result = await client.lookup("1.2.3.4", "ip")
 
     assert result["is_malicious"] is True
@@ -317,6 +353,7 @@ async def test_match_with_missing_fields(client):
 
 
 # -- API errors ----------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_api_failure_returns_none(client):
@@ -330,18 +367,25 @@ async def test_api_failure_returns_none(client):
 async def test_request_sends_correct_body(client):
     mock_resp = _make_response(query_status="no_result")
 
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         await client.lookup("evil.com", "domain")
 
     mock_req.assert_called_once_with(
         "POST",
         "https://threatfox-api.abuse.ch/api/v1/",
-        json_body={"query": "search_ioc", "search_term": "evil.com", "exact_match": True},
+        json_body={
+            "query": "search_ioc",
+            "search_term": "evil.com",
+            "exact_match": True,
+        },
         headers={"Auth-Key": TEST_API_KEY},
     )
 
 
 # -- Configuration ------------------------------------------------------------
+
 
 def test_configured_with_api_key():
     client = ThreatFoxClient(api_key="my-key")
@@ -382,12 +426,18 @@ async def test_no_auth_header_without_key():
         client = ThreatFoxClient()
 
     mock_resp = _make_response(query_status="no_result")
-    with patch.object(client, "_request", new_callable=AsyncMock, return_value=mock_resp) as mock_req:
+    with patch.object(
+        client, "_request", new_callable=AsyncMock, return_value=mock_resp
+    ) as mock_req:
         await client.lookup("1.2.3.4", "ip")
 
     mock_req.assert_called_once_with(
         "POST",
         "https://threatfox-api.abuse.ch/api/v1/",
-        json_body={"query": "search_ioc", "search_term": "1.2.3.4", "exact_match": True},
+        json_body={
+            "query": "search_ioc",
+            "search_term": "1.2.3.4",
+            "exact_match": True,
+        },
         headers={},
     )

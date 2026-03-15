@@ -46,9 +46,7 @@ class URLhausClient(ThreatIntelSource):
             return None
 
         # URLhaus expects form-encoded POST data, not JSON
-        data = await self._request(
-            "POST", self.base_url, form_data={"url": indicator}
-        )
+        data = await self._request("POST", self.base_url, form_data={"url": indicator})
         if data is None:
             return None
 

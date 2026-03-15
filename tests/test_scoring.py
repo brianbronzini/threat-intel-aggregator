@@ -9,6 +9,7 @@ from core.scoring import calculate_reputation
 # Helper factories
 # ---------------------------------------------------------------------------
 
+
 def _gn(is_noise=False, is_malicious=False):
     return {"is_noise": is_noise, "is_malicious": is_malicious}
 
@@ -59,6 +60,7 @@ def _all_malicious():
 # All sources malicious / all clean
 # ---------------------------------------------------------------------------
 
+
 class TestExtremeCases:
     def test_all_malicious(self):
         result = calculate_reputation(_all_malicious())
@@ -67,7 +69,11 @@ class TestExtremeCases:
         assert result["confidence_score"] == 160
         assert result["score_breakdown"]["total"] == 160
         assert set(result["sources_flagged"]) == {
-            "greynoise", "abuseipdb", "virustotal", "threatfox", "urlhaus"
+            "greynoise",
+            "abuseipdb",
+            "virustotal",
+            "threatfox",
+            "urlhaus",
         }
 
     def test_all_clean(self):
@@ -95,6 +101,7 @@ class TestExtremeCases:
 # ---------------------------------------------------------------------------
 # GreyNoise scanner override
 # ---------------------------------------------------------------------------
+
 
 class TestGreyNoiseScannerOverride:
     def test_scanner_returns_immediately(self):
@@ -132,17 +139,21 @@ class TestGreyNoiseScannerOverride:
 # Classification threshold boundaries
 # ---------------------------------------------------------------------------
 
+
 class TestClassificationBoundaries:
-    @pytest.mark.parametrize("score,expected", [
-        (0, "CLEAN"),
-        (19, "CLEAN"),
-        (20, "SCANNER"),
-        (39, "SCANNER"),
-        (40, "SUSPICIOUS"),
-        (69, "SUSPICIOUS"),
-        (70, "MALICIOUS"),
-        (100, "MALICIOUS"),
-    ])
+    @pytest.mark.parametrize(
+        "score,expected",
+        [
+            (0, "CLEAN"),
+            (19, "CLEAN"),
+            (20, "SCANNER"),
+            (39, "SCANNER"),
+            (40, "SUSPICIOUS"),
+            (69, "SUSPICIOUS"),
+            (70, "MALICIOUS"),
+            (100, "MALICIOUS"),
+        ],
+    )
     def test_boundary(self, score, expected):
         """Verify classification thresholds using direct breakdown manipulation."""
         # We can't set arbitrary scores directly, but we can compose sources
@@ -156,7 +167,7 @@ class TestClassificationBoundaries:
         # There's no combo that yields exactly 69, but 65 is SUSPICIOUS
         sources = _empty()
         sources["greynoise"] = _gn(is_malicious=True)  # 30
-        sources["urlhaus"] = _uh(is_malicious=True)     # 35
+        sources["urlhaus"] = _uh(is_malicious=True)  # 35
         result = calculate_reputation(sources)
         assert result["confidence_score"] == 65
         assert result["reputation"] == "SUSPICIOUS"
@@ -206,6 +217,7 @@ class TestClassificationBoundaries:
 # ---------------------------------------------------------------------------
 # Individual source contributions (isolated)
 # ---------------------------------------------------------------------------
+
 
 class TestGreyNoiseScoring:
     def test_malicious_adds_30(self):
@@ -346,6 +358,7 @@ class TestIPInfoScoring:
 # Partial data / mixed signals
 # ---------------------------------------------------------------------------
 
+
 class TestPartialData:
     def test_only_greynoise_present(self):
         result = calculate_reputation({"greynoise": _gn(is_malicious=True)})
@@ -378,9 +391,9 @@ class TestPartialData:
 class TestMixedSignals:
     def test_high_abuseipdb_low_everything_else(self):
         sources = _empty()
-        sources["abuseipdb"] = _ab(confidence_score=90)   # 40
-        sources["virustotal"] = _vt(positives=1)           # 0
-        sources["threatfox"] = _tf(max_confidence=10)      # 0
+        sources["abuseipdb"] = _ab(confidence_score=90)  # 40
+        sources["virustotal"] = _vt(positives=1)  # 0
+        sources["threatfox"] = _tf(max_confidence=10)  # 0
         result = calculate_reputation(sources)
         assert result["confidence_score"] == 40
         assert result["reputation"] == "SUSPICIOUS"
@@ -388,8 +401,8 @@ class TestMixedSignals:
 
     def test_multiple_mid_tier_sources(self):
         sources = _empty()
-        sources["abuseipdb"] = _ab(confidence_score=55)   # 20
-        sources["virustotal"] = _vt(positives=4)           # 15
+        sources["abuseipdb"] = _ab(confidence_score=55)  # 20
+        sources["virustotal"] = _vt(positives=4)  # 15
         result = calculate_reputation(sources)
         assert result["confidence_score"] == 35
         assert result["reputation"] == "SCANNER"
@@ -398,6 +411,7 @@ class TestMixedSignals:
 # ---------------------------------------------------------------------------
 # Score breakdown accuracy
 # ---------------------------------------------------------------------------
+
 
 class TestScoreBreakdown:
     def test_breakdown_sums_correctly(self):

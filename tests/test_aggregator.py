@@ -2,8 +2,7 @@
 
 import asyncio
 import time
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -14,6 +13,7 @@ from db.models import IOCRecord
 # ---------------------------------------------------------------------------
 # Fixtures & helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_source(name: str, result: dict | None = None, delay: float = 0):
     """Create a mock source client that returns `result` after `delay` seconds."""
@@ -39,7 +39,11 @@ def _abuseipdb_result(confidence_score=0):
 
 
 def _virustotal_result(positives=0):
-    return {"source": "virustotal", "positives": positives, "is_malicious": positives > 5}
+    return {
+        "source": "virustotal",
+        "positives": positives,
+        "is_malicious": positives > 5,
+    }
 
 
 def _ipinfo_result():
@@ -111,6 +115,7 @@ HASH_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 # ---------------------------------------------------------------------------
 # Validation
 # ---------------------------------------------------------------------------
+
 
 class TestValidation:
     @pytest.mark.parametrize("ip", ["8.8.8.8", "1.2.3.4", "255.255.255.255"])
@@ -192,6 +197,7 @@ class TestValidation:
 # Cache behaviour
 # ---------------------------------------------------------------------------
 
+
 class TestCacheBehavior:
     async def test_cache_hit_returns_immediately(self):
         cached_record = IOCRecord(
@@ -242,7 +248,10 @@ class TestCacheBehavior:
 
     async def test_force_refresh_bypasses_cache(self):
         cached_record = IOCRecord(
-            indicator=IP, ioc_type="ip", reputation="CLEAN", confidence_score=0,
+            indicator=IP,
+            ioc_type="ip",
+            reputation="CLEAN",
+            confidence_score=0,
             metadata={"sources": {}},
         )
         cache = _mock_cache(hit=cached_record)
@@ -273,6 +282,7 @@ class TestCacheBehavior:
 # ---------------------------------------------------------------------------
 # IOC type routing
 # ---------------------------------------------------------------------------
+
 
 class TestIOCTypeRouting:
     async def test_ip_calls_five_sources(self):
@@ -312,6 +322,7 @@ class TestIOCTypeRouting:
 # Parallel execution
 # ---------------------------------------------------------------------------
 
+
 class TestParallelExecution:
     async def test_sources_run_in_parallel(self):
         """Total time should be ~max(delays), not sum(delays)."""
@@ -336,6 +347,7 @@ class TestParallelExecution:
 # Error scenarios
 # ---------------------------------------------------------------------------
 
+
 class TestErrorScenarios:
     async def test_one_source_fails_others_succeed(self):
         failing = AsyncMock()
@@ -356,7 +368,10 @@ class TestErrorScenarios:
         failing.lookup = AsyncMock(side_effect=Exception("fail"))
         failing.close = AsyncMock()
 
-        sources = {name: failing for name in ["greynoise", "abuseipdb", "virustotal", "threatfox", "ipinfo"]}
+        sources = {
+            name: failing
+            for name in ["greynoise", "abuseipdb", "virustotal", "threatfox", "ipinfo"]
+        }
         agg = ThreatIntelAggregator(cache=_mock_cache(), sources=sources)
         result = await agg.enrich_ioc(IP, "ip")
 
@@ -380,6 +395,7 @@ class TestErrorScenarios:
 # Data aggregation
 # ---------------------------------------------------------------------------
 
+
 class TestDataAggregation:
     async def test_ipinfo_enrichment_included(self):
         sources = _ip_sources()
@@ -395,7 +411,9 @@ class TestDataAggregation:
         sources = _ip_sources(
             threatfox=_make_source("threatfox", _threatfox_result(80))
         )
-        agg = ThreatIntelAggregator(cache=cache if (cache := _mock_cache()) else cache, sources=sources)
+        agg = ThreatIntelAggregator(
+            cache=cache if (cache := _mock_cache()) else cache, sources=sources
+        )
         result = await agg.enrich_ioc(IP, "ip")
 
         assert "botnet_cc" in result["threat_details"]["threat_types"]
@@ -450,6 +468,7 @@ class TestDataAggregation:
 # Result structure
 # ---------------------------------------------------------------------------
 
+
 class TestResultStructure:
     async def test_all_top_level_keys_present(self):
         sources = _ip_sources()
@@ -457,10 +476,20 @@ class TestResultStructure:
         result = await agg.enrich_ioc(IP, "ip")
 
         for key in [
-            "indicator", "type", "reputation", "confidence_score",
-            "is_malicious", "sources_consulted", "sources_flagged",
-            "enrichment", "threat_details", "metadata", "score_breakdown",
-            "first_seen", "last_updated", "ttl",
+            "indicator",
+            "type",
+            "reputation",
+            "confidence_score",
+            "is_malicious",
+            "sources_consulted",
+            "sources_flagged",
+            "enrichment",
+            "threat_details",
+            "metadata",
+            "score_breakdown",
+            "first_seen",
+            "last_updated",
+            "ttl",
         ]:
             assert key in result, f"Missing key: {key}"
 
@@ -487,6 +516,7 @@ class TestResultStructure:
 # ---------------------------------------------------------------------------
 # Scoring integration
 # ---------------------------------------------------------------------------
+
 
 class TestScoringIntegration:
     async def test_malicious_ip_scored_correctly(self):
@@ -517,6 +547,7 @@ class TestScoringIntegration:
 # ---------------------------------------------------------------------------
 # Robustness
 # ---------------------------------------------------------------------------
+
 
 class TestRobustness:
     async def test_whitespace_stripped_from_indicator(self):
@@ -567,6 +598,7 @@ class TestRobustness:
 # ---------------------------------------------------------------------------
 # Close
 # ---------------------------------------------------------------------------
+
 
 class TestClose:
     async def test_close_closes_all_sources(self):

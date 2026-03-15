@@ -1,6 +1,4 @@
-import os
-import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import pytest
 import aiosqlite
@@ -19,6 +17,7 @@ def tmp_db(monkeypatch, tmp_path):
 
 
 # -- Database initialization --------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_init_db_creates_tables(tmp_path, monkeypatch):
@@ -47,6 +46,7 @@ async def test_init_db_is_idempotent(tmp_path, monkeypatch):
 
 
 # -- IOCRecord model ----------------------------------------------------------
+
 
 def test_ioc_record_defaults():
     record = IOCRecord(indicator="8.8.8.8", ioc_type="ip")
@@ -78,6 +78,7 @@ def test_ioc_record_to_dict():
 
 
 # -- Cache insert and retrieve ------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_cache_store_and_get():
@@ -143,8 +144,12 @@ async def test_cache_delete():
 async def test_cache_stats():
     await init_db()
 
-    await CacheManager.store(IOCRecord(indicator="1.1.1.1", ioc_type="ip", reputation="CLEAN"))
-    await CacheManager.store(IOCRecord(indicator="2.2.2.2", ioc_type="ip", reputation="MALICIOUS"))
+    await CacheManager.store(
+        IOCRecord(indicator="1.1.1.1", ioc_type="ip", reputation="CLEAN")
+    )
+    await CacheManager.store(
+        IOCRecord(indicator="2.2.2.2", ioc_type="ip", reputation="MALICIOUS")
+    )
 
     stats = await CacheManager.stats()
     assert stats["total_cached"] == 2
@@ -153,6 +158,7 @@ async def test_cache_stats():
 
 
 # -- Rate limit tracker -------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_rate_limit_tracker():
@@ -165,6 +171,7 @@ async def test_rate_limit_tracker():
         pass
 
     from db.models import DB_PATH as current_path
+
     async with aiosqlite.connect(current_path) as db:
         db.row_factory = aiosqlite.Row
         await RateLimitTracker.init_source(db, "test_source", 2)
@@ -182,8 +189,10 @@ async def test_rate_limit_tracker():
 
 # -- Base API client -----------------------------------------------------------
 
+
 class DummySource(ThreatIntelSource):
     """Concrete subclass for testing the abstract base."""
+
     source_name = "dummy"
     base_url = "https://example.com"
     daily_limit = 0
