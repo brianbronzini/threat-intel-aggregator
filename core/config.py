@@ -19,8 +19,10 @@ class Settings(BaseSettings):
     database_path: str = "data/cache.db"
 
     # API Server
-    api_host: str = "0.0.0.0"
+    api_host: str = "127.0.0.1"
     api_port: int = 8000
+    api_key: str = ""
+    cors_origins: str = ""
 
     # Cache TTL in hours per IOC type
     cache_ttl_ip: int = 168  # 7 days

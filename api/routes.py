@@ -3,15 +3,31 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Security
+from fastapi.security import APIKeyHeader
 
 from api.models import IOCRequest
+from core.config import settings
 from core.aggregator import ThreatIntelAggregator
 from db.cache import CacheManager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def require_api_key(
+    api_key: str | None = Security(_api_key_header),
+) -> str:
+    """Validate the API key if one is configured."""
+    if not settings.api_key:
+        return ""  # No key configured, allow all (dev mode)
+    if not api_key or api_key != settings.api_key:
+        raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    return api_key
+
 
 # Module-level aggregator instance, created lazily
 _aggregator: ThreatIntelAggregator | None = None
@@ -40,7 +56,7 @@ async def health() -> dict:
     }
 
 
-@router.post("/enrich")
+@router.post("/enrich", dependencies=[Depends(require_api_key)])
 async def enrich(request: IOCRequest) -> dict:
     """Enrich an IOC with threat intelligence from all applicable sources."""
     aggregator = get_aggregator()
@@ -58,7 +74,7 @@ async def enrich(request: IOCRequest) -> dict:
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/stats")
+@router.get("/stats", dependencies=[Depends(require_api_key)])
 async def stats() -> dict:
     """Return cache and enrichment statistics."""
     try:
